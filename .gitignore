@@ -1,4 +1,7 @@
 *.class
+build/
+ide-bin/
+fix8on/
 
 # Package Files #
 *.war

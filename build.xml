@@ -14,7 +14,7 @@
         <javac srcdir="src" destdir="build/classes" classpathref="project.class.path"/>
     </target>
 
-    <target name="jar">
+    <target name="jar" depends="compile">
         <mkdir dir="build/jar"/>
         <jar destfile="build/jar/fix8on.jar" basedir="build/classes">
             <manifest>

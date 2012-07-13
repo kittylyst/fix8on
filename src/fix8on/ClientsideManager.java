@@ -22,11 +22,11 @@ import quickfix.UnsupportedMessageType;
  * @author boxcat
  *
  */
-public class DMAManager implements Application {
+public class ClientsideManager implements Application {
 
     private DefaultMessageFactory messageFactory = new DefaultMessageFactory();
 	
-	public DMAManager(SessionSettings settings, List<JsonNode> clientCfgs) {
+	public ClientsideManager(SessionSettings settings, List<JsonNode> clientCfgs) {
 		// TODO Auto-generated constructor stub
 	}
 

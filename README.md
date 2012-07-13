@@ -29,3 +29,8 @@ So this style of application is well suited to a pipeline design utilising the b
 of java.util.functions
 
 Individual clients are configured up by using a JSON format to describe them.
+
+Start with:
+
+java -cp lib/mina-core-1.1.7.jar:lib/jackson-all-1.9.8.jar:lib/quickfixj-all-1.5.2.jar:lib/logback-core-1.0.6.jar:lib/slf4j-api-1.6.6.jar:build/jar/fix8on.jar fix8on.Main src/fix8on/config
+
