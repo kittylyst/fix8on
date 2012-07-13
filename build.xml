@@ -1,0 +1,26 @@
+<project>
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+	<path id="project.class.path">
+	    <pathelement path="${classpath}"/>
+	    <pathelement location="lib/quickfixj-all-1.5.2.jar"/>
+	    <pathelement location="lib/jackson-all-1.9.8.jar"/>
+	</path>
+	
+    <target name="compile">
+        <mkdir dir="build/classes"/>
+        <javac srcdir="src" destdir="build/classes" classpathref="project.class.path"/>
+    </target>
+
+    <target name="jar">
+        <mkdir dir="build/jar"/>
+        <jar destfile="build/jar/fix8on.jar" basedir="build/classes">
+            <manifest>
+                <attribute name="Main-Class" value="fix8on.Main"/>
+		    </manifest>
+        </jar>
+    </target>
+</project>
+
