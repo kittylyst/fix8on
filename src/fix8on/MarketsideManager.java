@@ -1,6 +1,7 @@
 package fix8on;
 
 import java.util.List;
+import java.util.Map;
 
 import org.codehaus.jackson.JsonNode;
 
@@ -26,7 +27,7 @@ public class MarketsideManager implements Application {
 
     private DefaultMessageFactory messageFactory = new DefaultMessageFactory();
 	
-	public MarketsideManager(SessionSettings settings, List<JsonNode> clientCfgs) {
+	public MarketsideManager(SessionSettings settings, List<Map<String,String>> clientCfgs) {
 		// TODO Auto-generated constructor stub
 	}
 

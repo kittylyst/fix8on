@@ -4,20 +4,25 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.soap.MessageFactory;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 
 import quickfix.Application;
 import quickfix.ConfigError;
@@ -44,19 +49,28 @@ public class Main {
 	 * @author boxcat
 	 * 
 	 */
-	private static class FindJsonVisitor extends SimpleFileVisitor<Path> {
+	static class FindJsonVisitor extends SimpleFileVisitor<Path> {
 		private final List<Path> files = new ArrayList<>();
 		private String clientCfg;
 		private String mktCfg;
+		
+		private static final PathMatcher jsonMatcher = FileSystems.getDefault().getPathMatcher("glob:*.json");
 		
 		public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
 	      Path fileName = file.getFileName();
 	      if (fileName.endsWith("client.cfg")) {
 	    	  clientCfg = file.toAbsolutePath().toString();
+	    	  // FIXME Convert to logging
+//	  		System.out.println("Found client config: "+ clientCfg);
 	      } else if (fileName.endsWith("market.cfg")) {
 	    	  mktCfg = file.toAbsolutePath().toString();
-	      } else if (fileName.endsWith(".json")) {
+//	    	  System.out.println("Found market config: "+ mktCfg);
+	      } else if (jsonMatcher.matches(fileName)) {
+	    	  // Now path match horribleness
+//	    	  System.out.println("Found json file: "+ fileName);
 	    	  files.add(file);
+	      } else {
+//	    	  System.out.println("Ignoring file: "+ fileName);
 	      }
 	      return FileVisitResult.CONTINUE;
 	    }
@@ -84,12 +98,10 @@ public class Main {
 		}
 		
 		// Handle client configs
-		List<JsonNode> clientCfgs = visitor.getFiles().map(f -> createJsonObject(f)).into(new ArrayList<JsonNode>());		
+		List<Map<String, String>> clientCfgs = visitor.getFiles().map(f -> createConfig(f)).into(new ArrayList<Map<String, String>>());		
 		if (clientCfgs.contains(null)) throw new ConfigError("Malformed JSON file in config dir");
 		
 		// Handle main config
-//		System.out.println("Clientside: "+ visitor.getClientsideCfg());
-//		System.out.println("Marketside: "+ visitor.getMarketsideCfg());
 		SessionSettings clientsideSettings = new SessionSettings(visitor.getClientsideCfg());
 		SessionSettings mktsideSettings = new SessionSettings(visitor.getMarketsideCfg());
 		
@@ -111,24 +123,18 @@ public class Main {
 		
 	}
 	
-	private static JsonNode createJsonObject(Path p) {
-		JsonNode cfg;
+	private static Map<String, String> createConfig(Path p) {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
-			cfg = mapper.readTree(p.toFile());
+			TypeReference<HashMap<String,String>> typeRef = new TypeReference<HashMap<String,String>>(){}; 
+	    
+			return mapper.readValue(p.toFile(), typeRef);
 		} catch (IOException iox) {
-			// FIXME Log a config error here...
+			System.out.println("File "+ p.getFileName() +" contains bad config");
 			return null;
 		}
-
-		return cfg;
 	}
 	
-	private SessionSettings createSessionSettings(JsonNode primaryCfg) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	private void run() {
 		
 	}

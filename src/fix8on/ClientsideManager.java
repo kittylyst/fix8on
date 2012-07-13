@@ -1,8 +1,10 @@
 package fix8on;
 
 import java.util.List;
-
-import org.codehaus.jackson.JsonNode;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.functions.Mapper;
 
 import quickfix.Application;
 import quickfix.DefaultMessageFactory;
@@ -26,8 +28,16 @@ public class ClientsideManager implements Application {
 
     private DefaultMessageFactory messageFactory = new DefaultMessageFactory();
 	
-	public ClientsideManager(SessionSettings settings, List<JsonNode> clientCfgs) {
-		// TODO Auto-generated constructor stub
+    private ConcurrentMap<String, List<Mapper<Message, Message>>> filters;
+    
+	public ClientsideManager(SessionSettings settings, List<Map<String, String>> clientCfgs) {
+		initFilters(clientCfgs);
+	}
+
+	private void initFilters(List<Map<String,String>> clientCfgs) {
+		filters = new ConcurrentHashMap<>();
+		clientCfgs.forEach(j -> {filters.put(Utils.createUUID(j), Utils.createFilters(j));});
+		System.out.println(filters);
 	}
 
 	@Override
@@ -37,11 +47,18 @@ public class ClientsideManager implements Application {
 		
 	}
 
+	/**
+	 * This method is where new order requests, cancels etc from the clients turn up.
+	 */
 	@Override
-	public void fromApp(Message arg0, SessionID arg1) throws FieldNotFound,
+	public void fromApp(Message msg, SessionID id) throws FieldNotFound,
 			IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
-		// TODO Auto-generated method stub
 		
+		FIX8ONMsg m = FIX8ONMsg.of(msg);
+		// FIXME Sanity check m against session ID
+		
+		// Lookup filter chain for this client
+	
 	}
 
 	@Override

@@ -1,7 +1,7 @@
 *.class
 build/
 ide-bin/
-fix8on/
+data/
 
 # Package Files #
 *.war
