@@ -3,6 +3,13 @@ build/
 ide-bin/
 data/
 
+# Eclipse IDE
+.classpath
+.settings/
+
 # Package Files #
 *.war
 *.ear
+
+# Martijn's shell script
+setJDK8Home.sh

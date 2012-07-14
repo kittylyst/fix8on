@@ -11,6 +11,6 @@ public abstract class DMAManager {
 
     protected ConcurrentMap<String, List<Mapper<Message, Message>>> filters;
 
-	protected abstract void initFilters(List<Map<String,String>> clientCfgs);
+    protected abstract void initFilters(List<Map<String, String>> clientCfgs);
 
 }
