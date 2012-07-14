@@ -42,8 +42,9 @@ public class Main {
 	private SocketInitiator initiator; // sending stuff down to market
 	private ClientsideManager clientsideMgr;
 	private MarketsideManager marketsideMgr;
+	private DMATransformEngine tfmEngine;
 	
-	private boolean shutdown = false;
+	private volatile boolean shutdown = false;
 	
 	/**
 	 * Helper class which finds the main config file and any client configuration files
@@ -66,10 +67,9 @@ public class Main {
 //	  		System.out.println("Found client config: "+ clientCfg);
 	      } else if (fileName.endsWith("market.cfg")) {
 	    	  mktCfg = file.toAbsolutePath().toString();
+	    	  // FIXME Convert to logging
 //	    	  System.out.println("Found market config: "+ mktCfg);
 	      } else if (jsonMatcher.matches(fileName)) {
-	    	  // Now path match horribleness
-//	    	  System.out.println("Found json file: "+ fileName);
 	    	  files.add(file);
 	      } else {
 //	    	  System.out.println("Ignoring file: "+ fileName);
@@ -123,6 +123,9 @@ public class Main {
         initiator = new SocketInitiator(marketsideMgr, msgStoreFactory, mktsideSettings,
                                       logFactory, new DefaultMessageFactory());
 		
+        tfmEngine = new DMATransformEngine(marketsideMgr, clientsideMgr);
+        tfmEngine.init(clientCfgs);
+        tfmEngine.start();
 	}
 	
 	private static Map<String, String> createConfig(Path p) {

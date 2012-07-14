@@ -31,14 +31,11 @@ public final class DMATransformEngine {
 		clbq = csm.getHandoff();
 	}
 	
-	private void initMarketsideFilters(List<Map<String,String>> cfgs) {
+	void init(List<Map<String,String>> cfgs) {
 		cfgs.forEach(j -> {mktFilters.put(Utils.createUUID(j), Utils.createMarketsideFilters(j));});
-//		System.out.println(filters);
-	}
-	
-	private void initClientsideFilters(List<Map<String,String>> cfgs) {
 		cfgs.forEach(j -> {csFilters.put(Utils.createUUID(j), Utils.createClientsideFilters(j));});
-//		System.out.println(filters);
+		System.out.println(mktFilters);
+		System.out.println(csFilters);
 	}
 
 	
@@ -59,6 +56,12 @@ public final class DMATransformEngine {
 			
 			// And handoff to the marketside manager
 		}
+		
+	}
+
+
+	public void start() {
+		// TODO Auto-generated method stub
 		
 	}
 
