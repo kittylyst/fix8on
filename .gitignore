@@ -11,5 +11,6 @@ data/
 *.war
 *.ear
 
-# Martijn's shell script
+# Martijn's shell scripts
 setJDK8Home.sh
+runFix8on.sh

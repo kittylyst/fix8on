@@ -46,13 +46,13 @@ public class Main {
     private boolean shutdown = false;
 
     /**
-     * Helper class which finds the main config file and any client
+     * Helper class which finds the main configuration file and any client
      * configuration files
      * 
-     * @author boxcat
-     * 
+     * @author boxcat 
      */
     static class FindJsonVisitor extends SimpleFileVisitor<Path> {
+        
         private final List<Path> files = new ArrayList<>();
         private String clientCfg;
         private String mktCfg;
@@ -92,42 +92,51 @@ public class Main {
         }
     }
 
-    private void init(String dirStr) throws ConfigError {		
-		// Find all JSON objects
-		FindJsonVisitor visitor = new FindJsonVisitor();
-		try {
-			Files.walkFileTree(Paths.get(dirStr), visitor); 
-		} catch (IOException iox) {
-			throw new ConfigError(iox);
-		}
-		
-		// Handle client configs
-		List<Map<String, String>> clientCfgs = visitor.getFiles().map(f -> createConfig(f)).into(new ArrayList<Map<String, String>>());		
-		if (clientCfgs.contains(null)) throw new ConfigError("Malformed JSON file in config dir");
-		
-		// Handle main config
-		SessionSettings clientsideSettings = new SessionSettings(visitor.getClientsideCfg());
-		SessionSettings mktsideSettings = new SessionSettings(visitor.getMarketsideCfg());
-		
-		// Configure up the acceptor - which will handle the transforms of incoming messages from clients
-		clientsideMgr = new ClientsideManager(clientsideSettings, clientCfgs);
+    private void init(String dirStr) throws ConfigError {
+        // Find all JSON objects
+        FindJsonVisitor visitor = findAllJsonFiles(dirStr);
+
+        // Handle client configs
+        List<Map<String, String>> clientCfgs = handleClientConfiguration(visitor);
+
+        // Handle main config
+        SessionSettings clientsideSettings = new SessionSettings(visitor.getClientsideCfg());
+        SessionSettings mktsideSettings = new SessionSettings(visitor.getMarketsideCfg());
+
+        // Configure up the acceptor - which will handle the transforms of incoming messages from clients
+        clientsideMgr = new ClientsideManager(clientsideSettings, clientCfgs);
         MessageStoreFactory msgStoreFactory = new FileStoreFactory(clientsideSettings);
         LogFactory logFactory = new ScreenLogFactory(true, true, true);
 
         acceptor = new SocketAcceptor(clientsideMgr, msgStoreFactory, clientsideSettings,
                                       logFactory, new DefaultMessageFactory());
-        
-        // 
-		marketsideMgr = new MarketsideManager(mktsideSettings, clientCfgs);
-		marketsideMgr.setOtherside(clientsideMgr);
-		clientsideMgr.setOtherside(marketsideMgr);
+         
+        marketsideMgr = new MarketsideManager(mktsideSettings, clientCfgs);
+        marketsideMgr.setOtherside(clientsideMgr);
+        clientsideMgr.setOtherside(marketsideMgr);
         msgStoreFactory = new FileStoreFactory(mktsideSettings);
-//        LogFactory logFactory = new ScreenLogFactory(true, true, true);
 
         initiator = new SocketInitiator(marketsideMgr, msgStoreFactory, mktsideSettings,
                                       logFactory, new DefaultMessageFactory());
-		
-	}
+
+    }
+
+    private List<Map<String, String>> handleClientConfiguration(
+            FindJsonVisitor visitor) throws ConfigError {
+        List<Map<String, String>> clientCfgs = visitor.getFiles().map(f -> createConfig(f)).into(new ArrayList<Map<String, String>>());		
+        if (clientCfgs.contains(null)) throw new ConfigError("Malformed JSON file in config dir");
+        return clientCfgs;
+    }
+
+    private FindJsonVisitor findAllJsonFiles(String dirStr) throws ConfigError {
+        FindJsonVisitor visitor = new FindJsonVisitor();
+        try {
+             Files.walkFileTree(Paths.get(dirStr), visitor); 
+        } catch (IOException iox) {
+            throw new ConfigError(iox);
+        }
+        return visitor;
+    }
 
     private static Map<String, String> createConfig(Path p) {
         try {
