@@ -13,13 +13,22 @@ public final class Utils {
 		return map.get("SenderCompID");
 	}
 
-	public static List<Mapper<Message, Message>> createFilters(final Map<String, String> m) {
+	public static List<Mapper<Message, Message>> createClientsideFilters(final Map<String, String> m) {
 		List<Mapper<Message, Message>> out = new ArrayList<>();
 		
 		// Set up symbology handling
 		if (m.get("symbol_from") != null) out.add(SymbolTransformer.of(m.get("symbol_from")));
 		
-		// Risk limit handling
+		return out;
+	}
+
+	public static List<Mapper<Message, Message>> createMarketsideFilters(final Map<String, String> m) {
+		List<Mapper<Message, Message>> out = new ArrayList<>();
+		
+		// Set up symbology handling
+		if (m.get("symbol_from") != null) out.add(SymbolTransformer.of(m.get("symbol_from")));
+		
+		// Risk limit handling - only done marketside
 		if (m.get("risk_limit") == null) {
 			out.add(new RiskLimitTransformer());
 		} else if (!m.get("risk_limit").equals("OFF")) {
@@ -33,5 +42,6 @@ public final class Utils {
 		
 		return out;
 	}
+
 	
 }

@@ -7,7 +7,7 @@ import quickfix.field.SenderCompID;
 public final class FIX8ONMsg {
 
 	private final Message initial;
-	private final Message current;
+	private Message current;
 	
 	private final String uuid;
 	
@@ -43,5 +43,17 @@ public final class FIX8ONMsg {
 
 	public static FIX8ONMsg of(Message m) {
 		return new FIX8ONMsg(m);
+	}
+
+	public Message getCurrent() {
+		return current;
+	}
+
+	public String getUuid() {
+		return uuid;
+	}
+
+	public void setCurrent(Message current) {
+		this.current = current;
 	}
 }

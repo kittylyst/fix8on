@@ -40,8 +40,8 @@ public class Main {
 
 	private SocketAcceptor acceptor; // connections from clients
 	private SocketInitiator initiator; // sending stuff down to market
-	private Application clientsideMgr;
-	private Application marketsideMgr;
+	private ClientsideManager clientsideMgr;
+	private MarketsideManager marketsideMgr;
 	
 	/**
 	 * Helper class which finds the main config file and any client configuration files
@@ -115,6 +115,8 @@ public class Main {
         
         // 
 		marketsideMgr = new MarketsideManager(mktsideSettings, clientCfgs);
+		marketsideMgr.setOtherside(clientsideMgr);
+		clientsideMgr.setOtherside(marketsideMgr);
         msgStoreFactory = new FileStoreFactory(mktsideSettings);
 //        LogFactory logFactory = new ScreenLogFactory(true, true, true);
 
