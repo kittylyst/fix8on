@@ -1,11 +1,6 @@
 package fix8on;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.functions.Mapper;
-
-import quickfix.Message;
 
 public final class Utils {
 
@@ -13,8 +8,8 @@ public final class Utils {
 		return map.get("SenderCompID");
 	}
 
-	public static List<Mapper<Message, Message>> createClientsideFilters(final Map<String, String> m) {
-		List<Mapper<Message, Message>> out = new ArrayList<>();
+	public static FilterChain createClientsideFilters(final Map<String, String> m) {
+		FilterChain out = new FilterChain();
 		
 		// Set up symbology handling
 		if (m.get("symbol_from") != null) out.add(SymbolTransformer.of(m.get("symbol_from")));
@@ -22,8 +17,8 @@ public final class Utils {
 		return out;
 	}
 
-	public static List<Mapper<Message, Message>> createMarketsideFilters(final Map<String, String> m) {
-		List<Mapper<Message, Message>> out = new ArrayList<>();
+	public static FilterChain createMarketsideFilters(final Map<String, String> m) {
+		FilterChain out = new FilterChain();
 		
 		// Set up symbology handling
 		if (m.get("symbol_from") != null) out.add(SymbolTransformer.of(m.get("symbol_from")));

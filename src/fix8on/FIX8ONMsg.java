@@ -2,6 +2,7 @@ package fix8on;
 
 import quickfix.FieldNotFound;
 import quickfix.Message;
+import quickfix.SessionID;
 import quickfix.field.SenderCompID;
 
 public final class FIX8ONMsg {
@@ -41,7 +42,7 @@ public final class FIX8ONMsg {
 		return "XXX";
 	}
 
-	public static FIX8ONMsg of(Message m) {
+	public static FIX8ONMsg of(Message m, SessionID id) {
 		return new FIX8ONMsg(m);
 	}
 

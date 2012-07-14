@@ -2,7 +2,9 @@ package fix8on;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.codehaus.jackson.JsonNode;
 
@@ -24,25 +26,17 @@ import quickfix.UnsupportedMessageType;
  * @author boxcat
  *
  */
-public class MarketsideManager extends DMAManager implements Application {
+public class MarketsideManager implements Application {
 
     private DefaultMessageFactory messageFactory = new DefaultMessageFactory();
-	private ClientsideManager handoff;
+	private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
+	private SessionSettings settings;
 	
-	public MarketsideManager(SessionSettings settings, List<Map<String,String>> clientCfgs) {
-		// TODO Auto-generated constructor stub
+    
+	public MarketsideManager(SessionSettings settings_) {
+		settings = settings_;
 	}
 
-	public void setOtherside(ClientsideManager mgr) {
-		handoff = mgr;
-	}
-	
-	protected void initFilters(List<Map<String,String>> clientCfgs) {
-		filters = new ConcurrentHashMap<>();
-		clientCfgs.forEach(j -> {filters.put(Utils.createUUID(j), Utils.createMarketsideFilters(j));});
-//		System.out.println(filters);
-	}
-	
 	@Override
 	public void fromAdmin(Message arg0, SessionID arg1) throws FieldNotFound,
 			IncorrectDataFormat, IncorrectTagValue, RejectLogon {
@@ -80,13 +74,17 @@ public class MarketsideManager extends DMAManager implements Application {
 
 	@Override
 	public void toApp(Message msg, SessionID id) throws DoNotSend {
-		FIX8ONMsg m = FIX8ONMsg.of(msg);
+		FIX8ONMsg m = FIX8ONMsg.of(msg, id);
 		// FIXME Sanity check m against session ID
 		
 		// Apply filter chain for this client
 		// For marketside this is things like risk checks
-		filters.get(m.getUuid()).forEach(t -> {m.setCurrent(t.map(m.getCurrent()));});
+//		filters.get(m.getUuid()).forEach(t -> {m.setCurrent(t.map(m.getCurrent()));});
 
+	}
+
+	public BlockingQueue<FIX8ONMsg> getHandoff() {
+		return handoff;
 	}
 
 }

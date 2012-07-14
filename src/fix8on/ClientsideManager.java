@@ -2,8 +2,10 @@ package fix8on;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.functions.Mapper;
 
 import quickfix.Application;
@@ -24,24 +26,16 @@ import quickfix.UnsupportedMessageType;
  * @author boxcat
  *
  */
-public class ClientsideManager extends DMAManager implements Application {
+public class ClientsideManager implements Application {
 
     private DefaultMessageFactory messageFactory = new DefaultMessageFactory();
-	private MarketsideManager handoff;
+	private final SessionSettings settings;
+	private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
 	
-	public ClientsideManager(SessionSettings settings, List<Map<String, String>> clientCfgs) {
-		initFilters(clientCfgs);
+	public ClientsideManager(SessionSettings settings_) {
+		settings = settings_;
 	}
 
-	public void setOtherside(MarketsideManager mgr) {
-		handoff = mgr;
-	}
-	
-	protected void initFilters(List<Map<String,String>> clientCfgs) {
-		filters = new ConcurrentHashMap<>();
-		clientCfgs.forEach(j -> {filters.put(Utils.createUUID(j), Utils.createClientsideFilters(j));});
-//		System.out.println(filters);
-	}
 	
 	@Override
 	public void fromAdmin(Message arg0, SessionID arg1) throws FieldNotFound,
@@ -56,17 +50,13 @@ public class ClientsideManager extends DMAManager implements Application {
 	public void fromApp(Message msg, SessionID id) throws FieldNotFound,
 			IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
 		
-		FIX8ONMsg m = FIX8ONMsg.of(msg);
+		FIX8ONMsg m = FIX8ONMsg.of(msg, id);
 		// FIXME Sanity check m against session ID
 		
-		// Apply filter chain for this client
-		filters.get(m.getUuid()).forEach(t -> {m.setCurrent(t.map(m.getCurrent()));});
-		
-		// Update any caches / statefulness
-		
-		// And handoff to the marketside manager
-		// FIXME this has to be done with an LBQ and a proper threadpool handoff
-//		handoff.toApp(m.getCurrent(), id);	
+		try {
+			handoff.put(m);
+		} catch (InterruptedException e) {
+		}	
 	}
 
 	@Override
@@ -94,6 +84,11 @@ public class ClientsideManager extends DMAManager implements Application {
 	public void toApp(Message arg0, SessionID arg1) throws DoNotSend {
 		// TODO Auto-generated method stub
 		
+	}
+
+
+	public BlockingQueue<FIX8ONMsg> getHandoff() {
+		return handoff;
 	}
 
 }

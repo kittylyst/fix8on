@@ -108,7 +108,7 @@ public class Main {
 		SessionSettings mktsideSettings = new SessionSettings(visitor.getMarketsideCfg());
 		
 		// Configure up the acceptor - which will handle the transforms of incoming messages from clients
-		clientsideMgr = new ClientsideManager(clientsideSettings, clientCfgs);
+		clientsideMgr = new ClientsideManager(clientsideSettings);
         MessageStoreFactory msgStoreFactory = new FileStoreFactory(clientsideSettings);
         LogFactory logFactory = new ScreenLogFactory(true, true, true);
 
@@ -116,9 +116,7 @@ public class Main {
                                       logFactory, new DefaultMessageFactory());
         
         // 
-		marketsideMgr = new MarketsideManager(mktsideSettings, clientCfgs);
-		marketsideMgr.setOtherside(clientsideMgr);
-		clientsideMgr.setOtherside(marketsideMgr);
+		marketsideMgr = new MarketsideManager(mktsideSettings);
         msgStoreFactory = new FileStoreFactory(mktsideSettings);
 //        LogFactory logFactory = new ScreenLogFactory(true, true, true);
 
