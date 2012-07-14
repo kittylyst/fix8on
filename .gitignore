@@ -3,6 +3,14 @@ build/
 ide-bin/
 data/
 
+# Eclipse IDE
+.classpath
+.settings/
+
 # Package Files #
 *.war
 *.ear
+
+# Martijn's shell scripts
+setJDK8Home.sh
+runFix8on.sh
