@@ -43,6 +43,8 @@ public class Main {
 	private ClientsideManager clientsideMgr;
 	private MarketsideManager marketsideMgr;
 	
+	private boolean shutdown = false;
+	
 	/**
 	 * Helper class which finds the main config file and any client configuration files
 	 * 
@@ -138,7 +140,12 @@ public class Main {
 	}
 	
 	private void run() {
-		
+		while (!shutdown) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+			}
+		}
 	}
 	
 	/**
