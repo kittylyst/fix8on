@@ -12,11 +12,11 @@ import fix8on.Main.FindJsonVisitor;
 
 public class TestJsonVisitor {
 
-	@Test
-	public void testFind() throws IOException {
-		FindJsonVisitor visitor = new FindJsonVisitor();
-		Files.walkFileTree(Paths.get("src/fix8on/config"), visitor); 
-		assertEquals(2, visitor.getFiles().size());
-	}
-	
+    @Test
+    public void testFind() throws IOException {
+        FindJsonVisitor visitor = new FindJsonVisitor();
+        Files.walkFileTree(Paths.get("src/fix8on/config"), visitor);
+        assertEquals(2, visitor.getFiles().size());
+    }
+
 }
