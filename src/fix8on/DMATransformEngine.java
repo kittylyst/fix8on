@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.functions.Mapper;
 
 import quickfix.Message;
@@ -34,18 +35,32 @@ public final class DMATransformEngine {
 	void init(List<Map<String,String>> cfgs) {
 		cfgs.forEach(j -> {mktFilters.put(Utils.createUUID(j), Utils.createMarketsideFilters(j));});
 		cfgs.forEach(j -> {csFilters.put(Utils.createUUID(j), Utils.createClientsideFilters(j));});
-		System.out.println(mktFilters);
-		System.out.println(csFilters);
+//		System.out.println(mktFilters);
+//		System.out.println(csFilters);
 	}
 
 	
-	private static class DMATransformTask {
+	private static class DMATransformTask implements Runnable {
 		
 		private final FilterChain fc;
+		private final BlockingQueue<FIX8ONMsg> q;
+		private volatile boolean shutdown = false;
 		
-		public DMATransformTask(FilterChain fc_) {
+		public DMATransformTask(FilterChain fc_, BlockingQueue<FIX8ONMsg> q_) {
 			fc = fc_;
+			q = q_;
 		}
+		
+	    public void run() {
+	        while (!shutdown ) {
+	            try {
+	                FIX8ONMsg wu = q.poll(100, TimeUnit.MILLISECONDS);
+	                if (wu != null) doAction(wu);
+	            } catch (InterruptedException e) {
+	                shutdown = true;
+	            }
+	        }
+	    }
 		
 		public void doAction(FIX8ONMsg m) {
 			// Apply filter chain for this client
@@ -54,7 +69,9 @@ public final class DMATransformEngine {
 			
 			// Update any caches / statefulness
 			
-			// And handoff to the marketside manager
+			// Remap sender & target comp ids
+			
+			// And handoff to the otherside manager
 		}
 		
 	}

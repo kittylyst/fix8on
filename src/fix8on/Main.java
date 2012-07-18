@@ -140,6 +140,7 @@ public class Main {
 		}
 	}
 	
+	// HACK FIXME
 	private void run() {
 		while (!shutdown) {
 			try {

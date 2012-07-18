@@ -17,8 +17,8 @@ public final class RiskLimitTransformer implements Mapper<Message, Message> {
 	
 	@Override
 	public Message map(Message t) {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO Implement
+		return t;
 	}
 
 }
