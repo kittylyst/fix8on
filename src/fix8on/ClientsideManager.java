@@ -21,10 +21,11 @@ import quickfix.SessionSettings;
 import quickfix.UnsupportedMessageType;
 
 /**
- * This appliaction only deals with a single version of FIX - FIX 4.4 for simplicity.
+ * This appliaction only deals with a single version of FIX - FIX 4.4 for
+ * simplicity.
  * 
  * @author boxcat
- *
+ * 
  */
 public class ClientsideManager implements Application {
 
@@ -43,10 +44,11 @@ public class ClientsideManager implements Application {
 		// NOOP		
 	}
 
-	/**
-	 * This method is where new order requests, cancels etc from the clients turn up.
-	 */
-	@Override
+    /**
+     * This method is where new order requests, cancels etc from the clients
+     * turn up.
+     */
+    @Override
 	public void fromApp(Message msg, SessionID id) throws FieldNotFound,
 			IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
 		
@@ -59,32 +61,32 @@ public class ClientsideManager implements Application {
 		}	
 	}
 
-	@Override
-	public void onCreate(SessionID arg0) {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public void onCreate(SessionID arg0) {
+        // TODO Auto-generated method stub
 
-	@Override
-	public void onLogon(SessionID arg0) {
-		// A wild FIX session appears!
-	}
+    }
 
-	@Override
-	public void onLogout(SessionID arg0) {
-		// The FIX session has gone away, we should do something about this...
-	}
+    @Override
+    public void onLogon(SessionID arg0) {
+        // A wild FIX session appears!
+    }
 
-	@Override
-	public void toAdmin(Message arg0, SessionID arg1) {
-		// Mostly NOOP
-	}
+    @Override
+    public void onLogout(SessionID arg0) {
+        // The FIX session has gone away, we should do something about this...
+    }
 
-	@Override
-	public void toApp(Message arg0, SessionID arg1) throws DoNotSend {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public void toAdmin(Message arg0, SessionID arg1) {
+        // Mostly NOOP
+    }
+
+    @Override
+    public void toApp(Message arg0, SessionID arg1) throws DoNotSend {
+        // TODO Auto-generated method stub
+
+    }
 
 
 	public BlockingQueue<FIX8ONMsg> getHandoff() {

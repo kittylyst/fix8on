@@ -6,7 +6,6 @@ import quickfix.SessionID;
 import quickfix.field.SenderCompID;
 
 public final class FIX8ONMsg {
-
 	private final Message initial;
 	private Message current;
 	
