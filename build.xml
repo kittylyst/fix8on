@@ -22,5 +22,17 @@
 		    </manifest>
         </jar>
     </target>
+
+    <target name="exec" depends="jar">
+        <java classname="fix8on.Main" fork="true">
+            <arg value="src/fix8on/config" />
+            <classpath>
+                <fileset dir="lib">
+                    <include name="**/*.jar" />
+                </fileset>
+                <pathelement location="build/jar/fix8on.jar" />
+            </classpath>
+        </java>
+    </target>
 </project>
 
