@@ -14,9 +14,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import quickfix.ConfigError;
 import quickfix.DefaultMessageFactory;
@@ -31,21 +34,36 @@ import quickfix.SocketInitiator;
 
 public class Main {
 
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
     private SocketAcceptor acceptor; // connections from clients
     private SocketInitiator initiator; // sending stuff down to market
     private ClientsideManager clientsideMgr;
     private MarketsideManager marketsideMgr;
+    private List<Map<String, String>> clientCfgs;
+    
+    private volatile boolean shutdown = false;
 
-    private boolean shutdown = false;
 
+    public void shutdown() {
+        shutdown = true;
+    }
+
+    @Override
+    public String toString() {
+        return "Main{" + "acceptor=" + acceptor + ", initiator=" + initiator + ", clientsideMgr=" + clientsideMgr + ", marketsideMgr=" + marketsideMgr + ", clientCfgs=" + clientCfgs + ", shutdown=" + shutdown + '}';
+    }
+
+    
+    
     /**
      * Helper class which finds the main configuration file and any client
      * configuration files
-     * 
-     * @author boxcat 
+     *
+     * @author boxcat
      */
-    static class FindJsonVisitor extends SimpleFileVisitor<Path> {
-        
+    public static class FindJsonVisitor extends SimpleFileVisitor<Path> {
+
         private final List<Path> files = new ArrayList<>();
         private String clientCfg;
         private String mktCfg;
@@ -53,21 +71,30 @@ public class Main {
         private static final PathMatcher jsonMatcher = FileSystems.getDefault()
                 .getPathMatcher("glob:*.json");
 
-        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+        @Override
+        public @Nonnull
+        FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
             Path fileName = file.getFileName();
             if (fileName.endsWith("client.cfg")) {
                 clientCfg = file.toAbsolutePath().toString();
-                // FIXME Convert to logging
-                // System.out.println("Found client config: "+ clientCfg);
+                if (logger.isInfoEnabled()) {
+                    logger.info("Found client config: " + clientCfg);
+                }
             } else if (fileName.endsWith("market.cfg")) {
                 mktCfg = file.toAbsolutePath().toString();
-                // System.out.println("Found market config: "+ mktCfg);
+                if (logger.isInfoEnabled()) {
+                    logger.info("Found market config: " + mktCfg);
+                }
             } else if (jsonMatcher.matches(fileName)) {
                 // Now path match horribleness
-                // System.out.println("Found json file: "+ fileName);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Found json file: " + fileName);
+                }
                 files.add(file);
             } else {
-                // System.out.println("Ignoring file: "+ fileName);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Ignoring file: " + fileName);
+                }
             }
             return FileVisitResult.CONTINUE;
         }
@@ -86,11 +113,11 @@ public class Main {
     }
 
     private void init(String dirStr) throws ConfigError {
-        // Find all JSON objects
+        // Find all JSON objects and client config
         FindJsonVisitor visitor = findAllJsonFiles(dirStr);
 
         // Handle client configs
-        List<Map<String, String>> clientCfgs = handleClientConfiguration(visitor);
+        clientCfgs = handleClientConfiguration(visitor);
 
         // Handle main config
         SessionSettings clientsideSettings = new SessionSettings(visitor.getClientsideCfg());
@@ -102,28 +129,32 @@ public class Main {
         LogFactory logFactory = new ScreenLogFactory(true, true, true);
 
         acceptor = new SocketAcceptor(clientsideMgr, msgStoreFactory, clientsideSettings,
-                                      logFactory, new DefaultMessageFactory());
-        // 
-		marketsideMgr = new MarketsideManager(mktsideSettings);
+                logFactory, new DefaultMessageFactory());
+
+        marketsideMgr = new MarketsideManager(mktsideSettings);
         msgStoreFactory = new FileStoreFactory(mktsideSettings);
 
         initiator = new SocketInitiator(marketsideMgr, msgStoreFactory, mktsideSettings,
-                                      logFactory, new DefaultMessageFactory());
+                logFactory, new DefaultMessageFactory());
     }
 
-    private List<Map<String, String>> handleClientConfiguration(
-            FindJsonVisitor visitor) throws ConfigError {
-        List<Map<String, String>> clientCfgs = 
-                visitor.getFiles().stream()
-                       .map(f -> createConfig(f)).collect(Collectors.toList());		
-        if (clientCfgs.contains(null)) throw new ConfigError("Malformed JSON file in config dir");
+    private @Nonnull
+    List<Map<String, String>> handleClientConfiguration(FindJsonVisitor visitor) throws ConfigError {
+        final List<Map<String, String>> clientCfgs
+                = visitor.getFiles().stream()
+                .map(f -> createConfig(f)).collect(Collectors.toList());
+        if (clientCfgs.contains(null)) {
+            // Work around exceptions being thrown from lambdas
+            throw new ConfigError("Malformed JSON file in config dir");
+        }
         return clientCfgs;
     }
 
-    private FindJsonVisitor findAllJsonFiles(String dirStr) throws ConfigError {
-        FindJsonVisitor visitor = new FindJsonVisitor();
+    private @Nonnull
+    FindJsonVisitor findAllJsonFiles(String dirStr) throws ConfigError {
+        final FindJsonVisitor visitor = new FindJsonVisitor();
         try {
-             Files.walkFileTree(Paths.get(dirStr), visitor); 
+            Files.walkFileTree(Paths.get(dirStr), visitor);
         } catch (IOException iox) {
             throw new ConfigError(iox);
         }
@@ -133,24 +164,25 @@ public class Main {
     private static Map<String, String> createConfig(Path p) {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            TypeReference<HashMap<String, String>> typeRef = new TypeReference<HashMap<String, String>>() {
-            };
+            TypeReference<HashMap<String, String>> typeRef
+                    = new TypeReference<HashMap<String, String>>() {
+                    };
 
             return mapper.readValue(p.toFile(), typeRef);
         } catch (IOException iox) {
-            System.out.println("File " + p.getFileName()
-                    + " contains bad config");
+            logger.warn("File " + p.getFileName() + " contains bad config");
             return null;
         }
     }
 
     private void run() {
-        while (!shutdown) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-            }
+//        while (!shutdown) {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
         }
+//        }
+        logger.info(toString());
     }
 
     /**
@@ -168,7 +200,7 @@ public class Main {
 
     /**
      * Now fully initialized, this method is used to start accepting connections
-     * 
+     *
      * @throws RuntimeError
      * @throws ConfigError
      */

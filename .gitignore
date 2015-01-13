@@ -2,6 +2,7 @@
 build/
 ide-bin/
 data/
+nbactions.xml
 
 # Eclipse IDE
 .classpath

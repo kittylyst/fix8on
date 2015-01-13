@@ -22,43 +22,53 @@ import quickfix.UnsupportedMessageType;
 /**
  * This appliaction only deals with a single version of FIX - FIX 4.4 for
  * simplicity.
- * 
+ *
  * @author boxcat
- * 
+ *
  */
 public class ClientsideManager implements Application {
 
-    private DefaultMessageFactory messageFactory = new DefaultMessageFactory();
-	private final SessionSettings settings;
-	private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
-	
-	public ClientsideManager(SessionSettings settings_) {
-		settings = settings_;
-	}
+    private final DefaultMessageFactory messageFactory = new DefaultMessageFactory();
+    private final SessionSettings settings;
+    private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
 
-	
-	@Override
-	public void fromAdmin(Message arg0, SessionID arg1) throws FieldNotFound,
-			IncorrectDataFormat, IncorrectTagValue, RejectLogon {
-		// NOOP		
-	}
+    public ClientsideManager(SessionSettings settings_) {
+        settings = settings_;
+    }
+
+    @Override
+    public String toString() {
+        return "ClientsideManager{" + "messageFactory=" + messageFactory + ", settings=" + settings + ", handoff=" + handoff + '}';
+    }
+    
+    @Override
+    public void fromAdmin(Message arg0, SessionID arg1) throws FieldNotFound,
+            IncorrectDataFormat, IncorrectTagValue, RejectLogon {
+        // NOOP		
+    }
 
     /**
      * This method is where new order requests, cancels etc from the clients
      * turn up.
+     * @param msg
+     * @param id
+     * @throws quickfix.FieldNotFound
+     * @throws quickfix.IncorrectDataFormat
+     * @throws quickfix.IncorrectTagValue
+     * @throws quickfix.UnsupportedMessageType
      */
     @Override
-	public void fromApp(Message msg, SessionID id) throws FieldNotFound,
-			IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
-		
-		FIX8ONMsg m = FIX8ONMsg.of(msg, id);
+    public void fromApp(Message msg, SessionID id) throws FieldNotFound,
+            IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
+
+        FIX8ONMsg m = FIX8ONMsg.of(msg, id);
 		// FIXME Sanity check m against session ID
-		
-		try {
-			handoff.put(m);
-		} catch (InterruptedException e) {
-		}	
-	}
+
+        try {
+            handoff.put(m);
+        } catch (InterruptedException e) {
+        }
+    }
 
     @Override
     public void onCreate(SessionID arg0) {
@@ -87,9 +97,8 @@ public class ClientsideManager implements Application {
 
     }
 
-
-	public BlockingQueue<FIX8ONMsg> getHandoff() {
-		return handoff;
-	}
+    public BlockingQueue<FIX8ONMsg> getHandoff() {
+        return handoff;
+    }
 
 }

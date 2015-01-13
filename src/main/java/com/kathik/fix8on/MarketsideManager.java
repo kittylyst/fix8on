@@ -3,7 +3,6 @@ package com.kathik.fix8on;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-
 import quickfix.Application;
 import quickfix.DefaultMessageFactory;
 import quickfix.DoNotSend;
@@ -17,23 +16,27 @@ import quickfix.SessionSettings;
 import quickfix.UnsupportedMessageType;
 
 /**
- * This appliaction only deals with a single version of FIX - FIX 4.4 for
+ * This application only deals with a single version of FIX - FIX 4.4 for
  * simplicity.
- * 
+ *
  * @author boxcat
- * 
+ *
  */
 public class MarketsideManager implements Application {
 
-    private DefaultMessageFactory messageFactory = new DefaultMessageFactory();
-	private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
-	private SessionSettings settings;
-	
-    
-	public MarketsideManager(SessionSettings settings_) {
-		settings = settings_;
-	}
+    private final DefaultMessageFactory messageFactory = new DefaultMessageFactory();
+    private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
+    private final SessionSettings settings;
 
+    public MarketsideManager(SessionSettings settings_) {
+        settings = settings_;
+    }
+
+    @Override
+    public String toString() {
+        return "MarketsideManager{" + "messageFactory=" + messageFactory + ", handoff=" + handoff + ", settings=" + settings + '}';
+    }
+    
     @Override
     public void fromAdmin(Message arg0, SessionID arg1) throws FieldNotFound,
             IncorrectDataFormat, IncorrectTagValue, RejectLogon {
@@ -70,17 +73,16 @@ public class MarketsideManager implements Application {
     }
 
     @Override
-	public void toApp(Message msg, SessionID id) throws DoNotSend {
-		FIX8ONMsg m = FIX8ONMsg.of(msg, id);
+    public void toApp(Message msg, SessionID id) throws DoNotSend {
+        FIX8ONMsg m = FIX8ONMsg.of(msg, id);
 		// FIXME Sanity check m against session ID
-		
+
 		// Apply filter chain for this client
-		// For marketside this is things like risk checks
+        // For marketside this is things like risk checks
 //		filters.get(m.getUuid()).forEach(t -> {m.setCurrent(t.map(m.getCurrent()));});
+    }
 
-	}
-
-	public BlockingQueue<FIX8ONMsg> getHandoff() {
-		return handoff;
-	}
+    public BlockingQueue<FIX8ONMsg> getHandoff() {
+        return handoff;
+    }
 }
