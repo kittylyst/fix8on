@@ -14,3 +14,4 @@ data/
 # Martijn's shell scripts
 setJDK8Home.sh
 runFix8on.sh
+/target/
