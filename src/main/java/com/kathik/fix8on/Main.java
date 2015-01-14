@@ -22,26 +22,38 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import quickfix.ConfigError;
+import quickfix.DefaultMessageFactory;
+import quickfix.FileStoreFactory;
+import quickfix.LogFactory;
+import quickfix.MessageStoreFactory;
 import quickfix.RuntimeError;
+import quickfix.ScreenLogFactory;
 import quickfix.SessionSettings;
+import quickfix.SocketAcceptor;
+import quickfix.SocketInitiator;
 
 public class Main {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    private DMATransformEngine transformEngine;
+    private SocketAcceptor acceptor;
+    private SocketInitiator initiator;
+    private ClientsideManager clientSideMgr;
+    private MarketsideManager marketSideMgr;
 
     private List<Map<String, String>> clientCfgs;
 
     private volatile boolean shutdown = false;
 
     public void shutdown() {
+        clientSideMgr.shutdown();
+        marketSideMgr.shutdown();
         shutdown = true;
     }
 
     @Override
     public String toString() {
-        return "Main{" + "transformEngine=" + transformEngine + ", clientCfgs=" + clientCfgs + ", shutdown=" + shutdown + '}';
+        return "Main{" + "acceptor=" + acceptor + ", initiator=" + initiator + ", clientSideMgr=" + clientSideMgr + ", marketSideMgr=" + marketSideMgr + ", clientCfgs=" + clientCfgs + ", shutdown=" + shutdown + '}';
     }
 
     private Main() {
@@ -135,14 +147,25 @@ public class Main {
         // Handle client configs and set clientCfgs
         clientCfgs = visitor.handleClientConfiguration();
 
-        // Handle main config
-        final ClientsideManager clientsideMgr = new ClientsideManager(new SessionSettings(visitor.getClientsideCfg()));
-        final MarketsideManager marketsideMgr = new MarketsideManager(new SessionSettings(visitor.getMarketsideCfg()));
-        transformEngine = new DMATransformEngine(marketsideMgr, clientsideMgr);
+        // Handle main config of the connection managers
+        clientSideMgr = new ClientsideManager(new SessionSettings(visitor.getClientsideCfg()));
+        marketSideMgr = new MarketsideManager(new SessionSettings(visitor.getMarketsideCfg()));
+
+        // Configure up the acceptor - which will handle the transforms of incoming messages from clients
+        MessageStoreFactory msgStoreFactory = new FileStoreFactory(clientSideMgr.getSettings());
+        LogFactory logFactory = new ScreenLogFactory(true, true, true);
+
+        acceptor = new SocketAcceptor(clientSideMgr, msgStoreFactory, clientSideMgr.getSettings(),
+                logFactory, new DefaultMessageFactory());
+
+        msgStoreFactory = new FileStoreFactory(marketSideMgr.getSettings());
+
+        initiator = new SocketInitiator(marketSideMgr, msgStoreFactory, marketSideMgr.getSettings(),
+                logFactory, new DefaultMessageFactory());
+
     }
 
-    private @Nonnull
-    FindJsonVisitor findAllJsonFiles(String dirStr) throws ConfigError {
+    private @Nonnull FindJsonVisitor findAllJsonFiles(String dirStr) throws ConfigError {
         final FindJsonVisitor visitor = new FindJsonVisitor();
         try {
             Files.walkFileTree(Paths.get(dirStr), visitor);
@@ -185,13 +208,15 @@ public class Main {
      * @throws ConfigError
      */
     public void start() throws RuntimeError, ConfigError {
-        transformEngine.start();
+        initiator.start();
+        acceptor.start();
     }
 
     /**
      * Cleanup method
      */
     private void stop() {
-        transformEngine.stop();
+        acceptor.stop();
+        initiator.stop();
     }
 }

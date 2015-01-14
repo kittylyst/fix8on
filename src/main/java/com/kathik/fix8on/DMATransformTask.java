@@ -7,19 +7,24 @@ package com.kathik.fix8on;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import quickfix.Application;
+import quickfix.DoNotSend;
+import quickfix.SessionID;
 
 /**
  *
  * @author boxcat
  */
 public final class DMATransformTask implements Runnable {
-    private final FilterChain fc;
     private final BlockingQueue<FIX8ONMsg> q;
+    private final Application app;
     private volatile boolean shutdown = false;
 
-    public DMATransformTask(FilterChain fc_, BlockingQueue<FIX8ONMsg> q_) {
-        fc = fc_;
+    public DMATransformTask(BlockingQueue<FIX8ONMsg> q_, Application sender) {
         q = q_;
+        app = sender;
     }
 
     public void run() {
@@ -36,14 +41,11 @@ public final class DMATransformTask implements Runnable {
     }
 
     public void doAction(FIX8ONMsg m) {
-        // Apply filter chain for this client
-        //			filters.get(m.getUuid()).forEach(t -> {m.setCurrent(t.map(m.getCurrent()));});
-        fc.getTransforms().forEach((t) -> {
-            m.setCurrent(t.apply(m.getCurrent()));
-        });
-        // Update any caches / statefulness
-        // Remap sender & target comp ids
-        // And handoff to the otherside manager
+        try {
+            app.toApp(m.getCurrent(), new SessionID(m.getUuid()));
+        } catch (DoNotSend ex) {
+            Logger.getLogger(DMATransformTask.class.getName()).log(Level.INFO, null, ex);
+        }
     }
     
 }

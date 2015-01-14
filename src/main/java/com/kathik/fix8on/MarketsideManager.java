@@ -36,34 +36,32 @@ import quickfix.UnsupportedMessageType;
  * @author boxcat
  *
  */
-public class MarketsideManager implements Application {
-
-    private final DefaultMessageFactory messageFactory = new DefaultMessageFactory();
-    private final BlockingQueue<FIX8ONMsg> recvfromEngine = new LinkedBlockingQueue<>();
-    private final BlockingQueue<FIX8ONMsg> sendToEngine = new LinkedBlockingQueue<>();
-    private final SessionSettings settings;
-    private final Map<String, Session> liveSessions = new HashMap<>();
-    private Map<String, List<Function<Message, Message>>> filters;
-    private final SessionFactory sessionFactory;
+public class MarketsideManager extends AbstractConnectionManager {
 
     public MarketsideManager(SessionSettings settings_) {
-        settings = settings_;
-        sessionFactory = new DefaultSessionFactory(this, new MemoryStoreFactory(), new SLF4JLogFactory(settings));
-    }
-
-    public SessionSettings getSettings() {
-        return settings;
+        super(settings_);
     }
 
     @Override
-    public String toString() {
-        return "MarketsideManager{" + "messageFactory=" + messageFactory + ", handoff=" + recvfromEngine + ", settings=" + settings + ", liveSessions=" + liveSessions + '}';
-    }
+    public void createFilters(final String sessID, final Map<String, String> m) {
+        fChain = new FilterChain();
 
-    @Override
-    public void fromAdmin(Message arg0, SessionID arg1) throws FieldNotFound,
-            IncorrectDataFormat, IncorrectTagValue, RejectLogon {
-        // NOOP
+        // Set up symbology handling
+        if (m.get("symbol_from") != null) {
+            fChain.add(sessID, SymbolTransformer.of(m.get("symbol_from")));
+        }
+
+        // Risk limit handling - only done marketside
+        if (m.get("risk_limit") == null) {
+            fChain.add(sessID, new RiskLimitTransformer());
+        } else if (!m.get("risk_limit").equals("OFF")) {
+            try {
+                long limit = Long.parseLong(m.get("risk_limit"));
+                fChain.add(sessID, new RiskLimitTransformer(limit));
+            } catch (NumberFormatException nmx) {
+                // Warn about misconfigured risk limit and carry on
+            }
+        }
     }
 
     @Override
@@ -72,11 +70,6 @@ public class MarketsideManager implements Application {
         // App logic goes here...
         // Fills etc coming back from market
 
-    }
-
-    @Override
-    public void onCreate(SessionID arg0) {
-        // TODO Auto-generated method stub
     }
 
     @Override
@@ -92,16 +85,6 @@ public class MarketsideManager implements Application {
         }
     }
 
-    @Override
-    public void onLogout(SessionID sessID) {
-        // The FIX session has gone away, we should do something about this...
-        liveSessions.remove(sessID.toString());
-    }
-
-    @Override
-    public void toAdmin(Message arg0, SessionID arg1) {
-        // Mostly NOOP
-    }
 
     @Override
     public void toApp(Message msg, SessionID sessID) throws DoNotSend {
@@ -114,16 +97,9 @@ public class MarketsideManager implements Application {
 
         // Apply filter chain for this client
         // For marketside this is things like risk checks
-        filters.get(m.getUuid()).stream().forEach(t -> m.setCurrent(t.apply(m.getCurrent())));
+        fChain.apply(m);
+
         liveSessions.get(m.getUuid()).send(m.getCurrent());
-
-    }
-
-    public BlockingQueue<FIX8ONMsg> getRecvHandoff() {
-        return recvfromEngine;
-    }
-    public BlockingQueue<FIX8ONMsg> getSendHandoff() {
-        return sendToEngine;
     }
 
 }

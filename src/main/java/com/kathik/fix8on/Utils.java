@@ -4,9 +4,9 @@ import java.util.Map;
 
 public final class Utils {
 
-    public static String createUUID(final Map<String, String> map) {
-        return map.get("SenderCompID");
-    }
+//    public static String createUUID(final Map<String, String> map) {
+//        return map.get("SenderCompID");
+//    }
 
     public static FilterChain createClientsideFilters(final Map<String, String> m) {
         FilterChain out = new FilterChain();
