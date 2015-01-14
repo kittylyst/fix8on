@@ -39,11 +39,12 @@ import quickfix.UnsupportedMessageType;
 public class MarketsideManager implements Application {
 
     private final DefaultMessageFactory messageFactory = new DefaultMessageFactory();
-    private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
+    private final BlockingQueue<FIX8ONMsg> recvfromEngine = new LinkedBlockingQueue<>();
+    private final BlockingQueue<FIX8ONMsg> sendToEngine = new LinkedBlockingQueue<>();
     private final SessionSettings settings;
     private final Map<String, Session> liveSessions = new HashMap<>();
     private Map<String, List<Function<Message, Message>>> filters;
-    private SessionFactory sessionFactory;
+    private final SessionFactory sessionFactory;
 
     public MarketsideManager(SessionSettings settings_) {
         settings = settings_;
@@ -56,7 +57,7 @@ public class MarketsideManager implements Application {
 
     @Override
     public String toString() {
-        return "MarketsideManager{" + "messageFactory=" + messageFactory + ", handoff=" + handoff + ", settings=" + settings + ", liveSessions=" + liveSessions + '}';
+        return "MarketsideManager{" + "messageFactory=" + messageFactory + ", handoff=" + recvfromEngine + ", settings=" + settings + ", liveSessions=" + liveSessions + '}';
     }
 
     @Override
@@ -85,7 +86,7 @@ public class MarketsideManager implements Application {
             Session sess = sessionFactory.create(sessID, settings);
             // Save the ID (& use it as a key)
             liveSessions.put(sessID.toString(), sess);
-            
+
         } catch (ConfigError ex) {
             Logger.getLogger(MarketsideManager.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -115,10 +116,14 @@ public class MarketsideManager implements Application {
         // For marketside this is things like risk checks
         filters.get(m.getUuid()).stream().forEach(t -> m.setCurrent(t.apply(m.getCurrent())));
         liveSessions.get(m.getUuid()).send(m.getCurrent());
-        
+
     }
 
-    public BlockingQueue<FIX8ONMsg> getHandoff() {
-        return handoff;
+    public BlockingQueue<FIX8ONMsg> getRecvHandoff() {
+        return recvfromEngine;
     }
+    public BlockingQueue<FIX8ONMsg> getSendHandoff() {
+        return sendToEngine;
+    }
+
 }

@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import quickfix.ConfigError;
@@ -21,8 +20,9 @@ import quickfix.SocketAcceptor;
 import quickfix.SocketInitiator;
 
 public final class DMATransformEngine {
+
     private static final Logger logger = LoggerFactory.getLogger(DMATransformEngine.class);
-    
+
     private final ConcurrentMap<String, FilterChain> csFilters = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, FilterChain> mktFilters = new ConcurrentHashMap<>();
 
@@ -31,26 +31,36 @@ public final class DMATransformEngine {
     private final BlockingQueue<FIX8ONMsg> msgsOnWayToMkt; // Messages from clients on way to market
     private final BlockingQueue<FIX8ONMsg> msgsFromMkt; // Messages from market on way back to client
 
+    private final BlockingQueue<FIX8ONMsg> msgsOnWayToClient; // Messages from clients on way to market
+    private final BlockingQueue<FIX8ONMsg> msgsFromClient; // Messages from market on way back to client
+
     private final MarketsideManager msm;
     private final ClientsideManager csm;
     private SocketAcceptor acceptor; // connections from clients
     private SocketInitiator initiator; // sending stuff down to market
 
-    
     public DMATransformEngine(MarketsideManager msm_, ClientsideManager csm_) {
         msm = msm_;
         csm = csm_;
-        msgsFromMkt = msm.getHandoff();
-        msgsOnWayToMkt = csm.getHandoff();
+        msgsFromMkt = msm.getSendHandoff();
+        msgsOnWayToMkt = msm.getRecvHandoff();
+
+        msgsFromClient = csm.getSendHandoff();
+        msgsOnWayToClient = csm.getRecvHandoff();
     }
 
     @Override
     public String toString() {
         return "DMATransformEngine{" + "csFilters=" + csFilters + ", mktFilters=" + mktFilters + ", stpe=" + stpe + ", msgsOnWayToMkt=" + msgsOnWayToMkt + ", msgsFromMkt=" + msgsFromMkt + ", msm=" + msm + ", csm=" + csm + ", acceptor=" + acceptor + ", initiator=" + initiator + '}';
     }
-    
+
+    /**
+     *
+     * @param cfgs
+     * @throws ConfigError
+     */
     void init(List<Map<String, String>> cfgs) throws ConfigError {
-                // Configure up the acceptor - which will handle the transforms of incoming messages from clients
+        // Configure up the acceptor - which will handle the transforms of incoming messages from clients
         MessageStoreFactory msgStoreFactory = new FileStoreFactory(csm.getSettings());
         LogFactory logFactory = new ScreenLogFactory(true, true, true);
 
@@ -62,7 +72,6 @@ public final class DMATransformEngine {
         initiator = new SocketInitiator(msm, msgStoreFactory, msm.getSettings(),
                 logFactory, new DefaultMessageFactory());
 
-        
 //        cfgs.forEach(j -> {
 //            mktFilters.put(Utils.createUUID(j), Utils.createMarketsideFilters(j));
 //        });
@@ -72,7 +81,6 @@ public final class DMATransformEngine {
 //		System.out.println(mktFilters);
 //		System.out.println(csFilters);
     }
-
 
     /**
      * Now fully initialized, this method is used to start accepting connections
