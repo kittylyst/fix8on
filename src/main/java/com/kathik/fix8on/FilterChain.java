@@ -10,25 +10,24 @@ import quickfix.Message;
 
 public class FilterChain {
 
-	private List<Function<Message, Message>> filters = new ArrayList<>();
-	
-	private final Lock lock = new ReentrantLock();
+    private List<Function<Message, Message>> filters = new ArrayList<>();
 
-	public void add(Function<Message, Message> m) {
-		filters.add(m);
-	}
-	
-	public void lock() {
-		lock.lock();
-	}
+    private final Lock lock = new ReentrantLock();
 
-	public void unlock() {
-		lock.unlock();
-	}
+    public void add(Function<Message, Message> m) {
+        filters.add(m);
+    }
 
-	public List<Function<Message, Message>> getTransforms() {
-		return filters;
-	}
+    public void lock() {
+        lock.lock();
+    }
 
-	
+    public void unlock() {
+        lock.unlock();
+    }
+
+    public List<Function<Message, Message>> getTransforms() {
+        return filters;
+    }
+
 }

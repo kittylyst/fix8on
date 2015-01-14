@@ -6,15 +6,25 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import quickfix.Application;
+import quickfix.ConfigError;
 import quickfix.DefaultMessageFactory;
+import quickfix.DefaultSessionFactory;
 import quickfix.DoNotSend;
 import quickfix.FieldNotFound;
 import quickfix.IncorrectDataFormat;
 import quickfix.IncorrectTagValue;
+import quickfix.MemoryStoreFactory;
 import quickfix.Message;
+import quickfix.MessageStore;
+import quickfix.MessageStoreFactory;
 import quickfix.RejectLogon;
+import quickfix.SLF4JLogFactory;
+import quickfix.Session;
+import quickfix.SessionFactory;
 import quickfix.SessionID;
 import quickfix.SessionSettings;
 import quickfix.UnsupportedMessageType;
@@ -31,11 +41,17 @@ public class MarketsideManager implements Application {
     private final DefaultMessageFactory messageFactory = new DefaultMessageFactory();
     private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
     private final SessionSettings settings;
-    private final Map<String, SessionID> liveSessions = new HashMap<>();
+    private final Map<String, Session> liveSessions = new HashMap<>();
     private Map<String, List<Function<Message, Message>>> filters;
+    private SessionFactory sessionFactory;
 
     public MarketsideManager(SessionSettings settings_) {
         settings = settings_;
+        sessionFactory = new DefaultSessionFactory(this, new MemoryStoreFactory(), new SLF4JLogFactory(settings));
+    }
+
+    public SessionSettings getSettings() {
+        return settings;
     }
 
     @Override
@@ -64,10 +80,15 @@ public class MarketsideManager implements Application {
 
     @Override
     public void onLogon(SessionID sessID) {
-        // A wild FIX session appears!
-
-        // Save the ID (& use it as a key?)
-        liveSessions.put(sessID.toString(), sessID);
+        try {
+            // A wild FIX session appears!
+            Session sess = sessionFactory.create(sessID, settings);
+            // Save the ID (& use it as a key)
+            liveSessions.put(sessID.toString(), sess);
+            
+        } catch (ConfigError ex) {
+            Logger.getLogger(MarketsideManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     @Override
@@ -83,6 +104,7 @@ public class MarketsideManager implements Application {
 
     @Override
     public void toApp(Message msg, SessionID sessID) throws DoNotSend {
+        // This is where the 
         // Sanity check m against session ID
         if (liveSessions.get(sessID.toString()) == null) {
             throw new DoNotSend();
@@ -92,6 +114,8 @@ public class MarketsideManager implements Application {
         // Apply filter chain for this client
         // For marketside this is things like risk checks
         filters.get(m.getUuid()).stream().forEach(t -> m.setCurrent(t.apply(m.getCurrent())));
+        liveSessions.get(m.getUuid()).send(m.getCurrent());
+        
     }
 
     public BlockingQueue<FIX8ONMsg> getHandoff() {

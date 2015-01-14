@@ -13,11 +13,12 @@ public final class FIX8ONMsg {
     private final String uuid;
     private final String sessionID;
 
-	// FIXME Really want the initial and final String representations of
+    // FIXME Really want the initial and final String representations of
     // these messages for logging & forensics - but looks like no easy way
     // to do this in QF/J
 //	private final String inStr;
 //	private final String outStr;
+
     private FIX8ONMsg(Message m, String sessID) {
         current = m;
         // FIXME Need a better way to take a snapshot of the original form of this message
@@ -30,7 +31,7 @@ public final class FIX8ONMsg {
     public String toString() {
         return "FIX8ONMsg{" + "initial=" + initial + ", current=" + current + ", uuid=" + uuid + ", sessionID=" + sessionID + '}';
     }
-    
+
     /**
      * This method is anticipated to become more sophisticated over time - to
      * allow different routing rules / limits for a subset of client orders. For

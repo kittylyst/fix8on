@@ -22,24 +22,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import quickfix.ConfigError;
-import quickfix.DefaultMessageFactory;
-import quickfix.FileStoreFactory;
-import quickfix.LogFactory;
-import quickfix.MessageStoreFactory;
 import quickfix.RuntimeError;
-import quickfix.ScreenLogFactory;
 import quickfix.SessionSettings;
-import quickfix.SocketAcceptor;
-import quickfix.SocketInitiator;
 
 public class Main {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    private SocketAcceptor acceptor; // connections from clients
-    private SocketInitiator initiator; // sending stuff down to market
-    private ClientsideManager clientsideMgr;
-    private MarketsideManager marketsideMgr;
+    private DMATransformEngine transformEngine;
+
     private List<Map<String, String>> clientCfgs;
 
     private volatile boolean shutdown = false;
@@ -50,7 +41,10 @@ public class Main {
 
     @Override
     public String toString() {
-        return "Main{" + "acceptor=" + acceptor + ", initiator=" + initiator + ", clientsideMgr=" + clientsideMgr + ", marketsideMgr=" + marketsideMgr + ", clientCfgs=" + clientCfgs + ", shutdown=" + shutdown + '}';
+        return "Main{" + "transformEngine=" + transformEngine + ", clientCfgs=" + clientCfgs + ", shutdown=" + shutdown + '}';
+    }
+
+    private Main() {
     }
 
     /**
@@ -96,6 +90,31 @@ public class Main {
             return FileVisitResult.CONTINUE;
         }
 
+        List<Map<String, String>> handleClientConfiguration() throws ConfigError {
+            final List<Map<String, String>> clientConfigs
+                    = getFiles().stream()
+                    .map(f -> createConfig(f)).collect(Collectors.toList());
+            if (clientConfigs.contains(null)) {
+                // Work around difficulties with exceptions being thrown from lambdas
+                throw new ConfigError("Malformed JSON file in config dir");
+            }
+            return clientConfigs;
+        }
+
+        private static Map<String, String> createConfig(Path p) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                TypeReference<HashMap<String, String>> typeRef
+                        = new TypeReference<HashMap<String, String>>() {
+                        };
+
+                return mapper.readValue(p.toFile(), typeRef);
+            } catch (IOException iox) {
+                logger.warn("File " + p.getFileName() + " contains bad config");
+                return null;
+            }
+        }
+
         public List<Path> getFiles() {
             return files;
         }
@@ -114,35 +133,12 @@ public class Main {
         FindJsonVisitor visitor = findAllJsonFiles(dirStr);
 
         // Handle client configs and set clientCfgs
-        handleClientConfiguration(visitor);
+        clientCfgs = visitor.handleClientConfiguration();
 
         // Handle main config
-        SessionSettings clientsideSettings = new SessionSettings(visitor.getClientsideCfg());
-        SessionSettings mktsideSettings = new SessionSettings(visitor.getMarketsideCfg());
-
-        // Configure up the acceptor - which will handle the transforms of incoming messages from clients
-        clientsideMgr = new ClientsideManager(clientsideSettings);
-        MessageStoreFactory msgStoreFactory = new FileStoreFactory(clientsideSettings);
-        LogFactory logFactory = new ScreenLogFactory(true, true, true);
-
-        acceptor = new SocketAcceptor(clientsideMgr, msgStoreFactory, clientsideSettings,
-                logFactory, new DefaultMessageFactory());
-
-        marketsideMgr = new MarketsideManager(mktsideSettings);
-        msgStoreFactory = new FileStoreFactory(mktsideSettings);
-
-        initiator = new SocketInitiator(marketsideMgr, msgStoreFactory, mktsideSettings,
-                logFactory, new DefaultMessageFactory());
-    }
-
-    private void handleClientConfiguration(FindJsonVisitor visitor) throws ConfigError {
-        clientCfgs
-                = visitor.getFiles().stream()
-                .map(f -> createConfig(f)).collect(Collectors.toList());
-        if (clientCfgs.contains(null)) {
-            // Work around exceptions being thrown from lambdas
-            throw new ConfigError("Malformed JSON file in config dir");
-        }
+        final ClientsideManager clientsideMgr = new ClientsideManager(new SessionSettings(visitor.getClientsideCfg()));
+        final MarketsideManager marketsideMgr = new MarketsideManager(new SessionSettings(visitor.getMarketsideCfg()));
+        transformEngine = new DMATransformEngine(marketsideMgr, clientsideMgr);
     }
 
     private @Nonnull
@@ -154,20 +150,6 @@ public class Main {
             throw new ConfigError(iox);
         }
         return visitor;
-    }
-
-    private static Map<String, String> createConfig(Path p) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            TypeReference<HashMap<String, String>> typeRef
-                    = new TypeReference<HashMap<String, String>>() {
-                    };
-
-            return mapper.readValue(p.toFile(), typeRef);
-        } catch (IOException iox) {
-            logger.warn("File " + p.getFileName() + " contains bad config");
-            return null;
-        }
     }
 
     private void run(boolean pauseMode) {
@@ -202,16 +184,14 @@ public class Main {
      * @throws RuntimeError
      * @throws ConfigError
      */
-    private void start() throws RuntimeError, ConfigError {
-        initiator.start();
-        acceptor.start();
+    public void start() throws RuntimeError, ConfigError {
+        transformEngine.start();
     }
 
     /**
      * Cleanup method
      */
     private void stop() {
-        acceptor.stop();
-        initiator.stop();
+        transformEngine.stop();
     }
 }

@@ -1,10 +1,6 @@
 package com.kathik.fix8on;
 
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import quickfix.Application;
@@ -20,7 +16,7 @@ import quickfix.SessionSettings;
 import quickfix.UnsupportedMessageType;
 
 /**
- * This appliaction only deals with a single version of FIX - FIX 4.4 for
+ * This application only deals with a single version of FIX - FIX 4.4 for
  * simplicity.
  *
  * @author boxcat
@@ -34,6 +30,10 @@ public class ClientsideManager implements Application {
 
     public ClientsideManager(SessionSettings settings_) {
         settings = settings_;
+    }
+
+    public SessionSettings getSettings() {
+        return settings;
     }
 
     @Override
