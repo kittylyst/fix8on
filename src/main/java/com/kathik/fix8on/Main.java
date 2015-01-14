@@ -41,9 +41,8 @@ public class Main {
     private ClientsideManager clientsideMgr;
     private MarketsideManager marketsideMgr;
     private List<Map<String, String>> clientCfgs;
-    
-    private volatile boolean shutdown = false;
 
+    private volatile boolean shutdown = false;
 
     public void shutdown() {
         shutdown = true;
@@ -54,8 +53,6 @@ public class Main {
         return "Main{" + "acceptor=" + acceptor + ", initiator=" + initiator + ", clientsideMgr=" + clientsideMgr + ", marketsideMgr=" + marketsideMgr + ", clientCfgs=" + clientCfgs + ", shutdown=" + shutdown + '}';
     }
 
-    
-    
     /**
      * Helper class which finds the main configuration file and any client
      * configuration files
@@ -116,8 +113,8 @@ public class Main {
         // Find all JSON objects and client config
         FindJsonVisitor visitor = findAllJsonFiles(dirStr);
 
-        // Handle client configs
-        clientCfgs = handleClientConfiguration(visitor);
+        // Handle client configs and set clientCfgs
+        handleClientConfiguration(visitor);
 
         // Handle main config
         SessionSettings clientsideSettings = new SessionSettings(visitor.getClientsideCfg());
@@ -138,16 +135,14 @@ public class Main {
                 logFactory, new DefaultMessageFactory());
     }
 
-    private @Nonnull
-    List<Map<String, String>> handleClientConfiguration(FindJsonVisitor visitor) throws ConfigError {
-        final List<Map<String, String>> clientCfgs
+    private void handleClientConfiguration(FindJsonVisitor visitor) throws ConfigError {
+        clientCfgs
                 = visitor.getFiles().stream()
                 .map(f -> createConfig(f)).collect(Collectors.toList());
         if (clientCfgs.contains(null)) {
             // Work around exceptions being thrown from lambdas
             throw new ConfigError("Malformed JSON file in config dir");
         }
-        return clientCfgs;
     }
 
     private @Nonnull
@@ -175,13 +170,16 @@ public class Main {
         }
     }
 
-    private void run() {
-//        while (!shutdown) {
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
+    private void run(boolean pauseMode) {
+        while (!shutdown) {
+            try {
+                Thread.sleep(5000);
+                if (pauseMode) {
+                    shutdown = true;
+                }
+            } catch (InterruptedException e) {
+            }
         }
-//        }
         logger.info(toString());
     }
 
@@ -194,7 +192,7 @@ public class Main {
         Main m = new Main();
         m.init(args[0]);
         m.start();
-        m.run();
+        m.run(true);
         m.stop();
     }
 

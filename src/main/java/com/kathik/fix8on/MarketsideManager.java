@@ -1,7 +1,11 @@
 package com.kathik.fix8on;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
 
 import quickfix.Application;
 import quickfix.DefaultMessageFactory;
@@ -27,6 +31,8 @@ public class MarketsideManager implements Application {
     private final DefaultMessageFactory messageFactory = new DefaultMessageFactory();
     private final BlockingQueue<FIX8ONMsg> handoff = new LinkedBlockingQueue<>();
     private final SessionSettings settings;
+    private final Map<String, SessionID> liveSessions = new HashMap<>();
+    private Map<String, List<Function<Message, Message>>> filters;
 
     public MarketsideManager(SessionSettings settings_) {
         settings = settings_;
@@ -34,14 +40,13 @@ public class MarketsideManager implements Application {
 
     @Override
     public String toString() {
-        return "MarketsideManager{" + "messageFactory=" + messageFactory + ", handoff=" + handoff + ", settings=" + settings + '}';
+        return "MarketsideManager{" + "messageFactory=" + messageFactory + ", handoff=" + handoff + ", settings=" + settings + ", liveSessions=" + liveSessions + '}';
     }
-    
+
     @Override
     public void fromAdmin(Message arg0, SessionID arg1) throws FieldNotFound,
             IncorrectDataFormat, IncorrectTagValue, RejectLogon {
         // NOOP
-
     }
 
     @Override
@@ -58,13 +63,17 @@ public class MarketsideManager implements Application {
     }
 
     @Override
-    public void onLogon(SessionID arg0) {
+    public void onLogon(SessionID sessID) {
         // A wild FIX session appears!
+
+        // Save the ID (& use it as a key?)
+        liveSessions.put(sessID.toString(), sessID);
     }
 
     @Override
-    public void onLogout(SessionID arg0) {
+    public void onLogout(SessionID sessID) {
         // The FIX session has gone away, we should do something about this...
+        liveSessions.remove(sessID.toString());
     }
 
     @Override
@@ -73,13 +82,16 @@ public class MarketsideManager implements Application {
     }
 
     @Override
-    public void toApp(Message msg, SessionID id) throws DoNotSend {
-        FIX8ONMsg m = FIX8ONMsg.of(msg, id);
-		// FIXME Sanity check m against session ID
+    public void toApp(Message msg, SessionID sessID) throws DoNotSend {
+        // Sanity check m against session ID
+        if (liveSessions.get(sessID.toString()) == null) {
+            throw new DoNotSend();
+        }
+        FIX8ONMsg m = FIX8ONMsg.of(msg, sessID);
 
-		// Apply filter chain for this client
+        // Apply filter chain for this client
         // For marketside this is things like risk checks
-//		filters.get(m.getUuid()).forEach(t -> {m.setCurrent(t.map(m.getCurrent()));});
+        filters.get(m.getUuid()).stream().forEach(t -> m.setCurrent(t.apply(m.getCurrent())));
     }
 
     public BlockingQueue<FIX8ONMsg> getHandoff() {
